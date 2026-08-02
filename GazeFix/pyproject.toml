@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gazefix"
+version = "0.1.0"
+description = "Gaze correction for talking-head video"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+dependencies = [
+    "numpy>=1.24",
+    "opencv-python-headless>=4.8",
+    "mediapipe>=0.10",
+]
+
+[project.optional-dependencies]
+server = [
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.27",
+    "python-multipart>=0.0.9",
+]
+dev = [
+    "pytest>=8.0",
+    "httpx>=0.27",
+]
+
+[project.scripts]
+gazefix = "gazefix.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["gazefix*"]
+
+[tool.setuptools.package-data]
+"gazefix.server" = ["static/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+filterwarnings = ["ignore::DeprecationWarning"]
+markers = ["model: needs the face landmarker model and real image fixtures"]

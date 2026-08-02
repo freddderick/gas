@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GazeFix</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>👁️</text></svg>">
+</head>
+<body>
+<header class="masthead">
+  <div class="wordmark"><span class="dot"></span> GazeFix</div>
+  <p class="tagline">Point a speaker&rsquo;s eyes back at the lens.</p>
+  <div id="health" class="health" hidden></div>
+</header>
+
+<main>
+  <section class="panel">
+    <h2>1 &middot; Choose a clip</h2>
+    <label id="drop" class="drop" for="file">
+      <input type="file" id="file" accept="video/mp4,video/quicktime,video/webm,video/x-matroska,video/x-msvideo,.mp4,.mov,.m4v,.webm,.mkv,.avi" hidden>
+      <strong>Drop a video here</strong>
+      <span>or click to browse &mdash; MP4, MOV, WebM, MKV, AVI</span>
+      <span id="picked" class="picked"></span>
+    </label>
+  </section>
+
+  <section class="panel">
+    <h2>2 &middot; Tune the correction</h2>
+    <div class="controls">
+      <div class="control">
+        <label for="strength">Strength <output id="strength-out"></output></label>
+        <input type="range" id="strength" min="0" max="1" step="0.05">
+        <p class="hint">How much of the correction to apply. Below 1 keeps some of the
+          original offset, which many people find reads as more natural.</p>
+      </div>
+
+      <div class="control">
+        <label for="falloff">Start fading at <output id="falloff-out"></output></label>
+        <input type="range" id="falloff" min="2" max="40" step="1">
+        <p class="hint">Gaze further off the lens than this is treated as increasingly
+          deliberate, and corrected less.</p>
+      </div>
+
+      <div class="control">
+        <label for="maxcorr">Leave alone past <output id="maxcorr-out"></output></label>
+        <input type="range" id="maxcorr" min="4" max="60" step="1">
+        <p class="hint">A glance at a second screen or a person off-camera stays
+          untouched, instead of being dragged back into an unsettling stare.</p>
+      </div>
+
+      <div class="control">
+        <label for="fov">Lens field of view <output id="fov-out"></output></label>
+        <input type="range" id="fov" min="20" max="120" step="1">
+        <p class="hint">About 60&deg; for a laptop webcam. Narrower for a long lens or a
+          tight shot.</p>
+      </div>
+
+      <div class="control span">
+        <label>Where was the camera?</label>
+        <div class="lens-row">
+          <div class="lens-pad" id="lens-pad" title="Click to place the lens">
+            <div class="lens-frame"></div>
+            <div class="lens-marker" id="lens-marker"></div>
+          </div>
+          <div class="lens-text">
+            <p class="hint">The centre is right for footage straight out of a camera. If the
+              clip was cropped or reframed &mdash; a vertical cut of a wider shot, say &mdash;
+              the lens is no longer at the centre, and aiming the eyes at the centre aims them
+              at nothing. Drag the marker to where the camera actually was; outside the frame
+              is allowed.</p>
+            <p class="lens-readout"><output id="lens-out"></output>
+              <button type="button" id="lens-reset" class="linkish">reset to centre</button></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="control">
+        <label for="faces">Faces to correct <output id="faces-out"></output></label>
+        <input type="range" id="faces" min="1" max="6" step="1">
+        <p class="hint">Raise for a two-shot or a panel.</p>
+      </div>
+
+      <div class="control">
+        <label class="checkbox">
+          <input type="checkbox" id="calibrate">
+          <span>Calibrate to this subject</span>
+        </label>
+        <p class="hint">Fits the subject&rsquo;s own eye anatomy by making the two eyes agree
+          with each other, instead of assuming population averages. Costs a quick extra pass.</p>
+      </div>
+    </div>
+    <button id="submit" class="primary" disabled>Correct this clip</button>
+    <p id="submit-error" class="error" hidden></p>
+  </section>
+
+  <section class="panel" id="job-panel" hidden>
+    <h2>3 &middot; Result</h2>
+    <div class="job-head">
+      <div>
+        <div id="job-name" class="job-name"></div>
+        <div id="job-stage" class="job-stage"></div>
+      </div>
+      <button id="cancel" class="linkish" hidden>discard</button>
+    </div>
+    <div class="progress"><div id="progress-bar"></div></div>
+
+    <div id="compare" class="compare" hidden>
+      <p class="hint">Drag across the frame to wipe between the original and the correction.</p>
+      <div class="compare-stage" id="compare-stage">
+        <img id="compare-img" alt="Before and after comparison">
+        <div class="compare-handle" id="compare-handle"><span></span></div>
+      </div>
+      <div class="scrub">
+        <label for="scrub">Frame</label>
+        <input type="range" id="scrub" min="0" max="100" step="0.5" value="0">
+        <output id="scrub-out"></output>
+      </div>
+    </div>
+
+    <div id="done" hidden>
+      <video id="player" controls playsinline></video>
+      <div class="actions">
+        <a id="download" class="primary" download>Download corrected video</a>
+      </div>
+      <dl id="stats" class="stats"></dl>
+      <div id="warnings"></div>
+      <details class="raw">
+        <summary>Full report</summary>
+        <pre id="raw-report"></pre>
+      </details>
+    </div>
+  </section>
+
+  <section class="panel" id="history-panel" hidden>
+    <h2>Earlier runs</h2>
+    <ul id="history" class="history"></ul>
+  </section>
+
+  <section class="panel notes">
+    <h2>What this can and cannot do</h2>
+    <p>GazeFix measures where each eye is pointing, works out where it would have to point to
+      meet the lens, and warps the eye region to close the gap. Because it rearranges the
+      pixels that are already there rather than redrawing the eye, the size of the correction
+      is bounded by how much of the eyeball is actually visible between the lids.</p>
+    <p>In practice that means it handles the everyday case well &mdash; someone reading from a
+      screen just below or beside the camera &mdash; and cannot manufacture eye contact from a
+      profile view or from a glance right off the side of the frame. Corrections it cannot pay
+      for are reported rather than faked.</p>
+  </section>
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>

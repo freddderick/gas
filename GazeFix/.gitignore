@@ -1,0 +1,16 @@
+# Fetched by tools/fetch_fixtures.py, not committed: the model is weights and
+# the portrait is a photograph of a person.
+tests/fixtures/
+*.task
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.coverage
+htmlcov/
