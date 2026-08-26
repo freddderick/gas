@@ -1,3 +1,6 @@
+*This repo holds two independent projects: **IOU** (below) and
+**[HologramCard](HologramCard/)**, a self-contained reflective hologram trading card.*
+
 # IOU — I Owe You
 
 An iOS app that turns the receipts already sitting in your Photos library into a searchable, filterable gallery.

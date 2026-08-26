@@ -1,0 +1,978 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Aurora Drake</title>
+<style>
+/* ------------------------------------------------------------------
+   Reflective hologram trading card
+   Pointer / keyboard / gyroscope driven 3D tilt, with four foil
+   finishes, glitter, tracking specular glare and a mirrored
+   reflection on the surface below.
+   ------------------------------------------------------------------ */
+
+:root {
+  color-scheme: light dark;
+
+  --bg:      #e9eaf2;
+  --bg-glow: #cdd2ea;
+  --ink:     #16171d;
+  --muted:   #5c6070;
+  --panel:   #ffffffcc;
+  --line:    #00000018;
+
+  /* Live state, written by JS. */
+  --px: 0.5;      /* pointer position across the card, 0..1 */
+  --py: 0.5;      /* pointer position down the card, 0..1   */
+  --rx: 0deg;     /* tilt about X */
+  --ry: 0deg;     /* tilt about Y */
+  --active: 0;    /* 1 while the card is being tilted */
+  --flip: 0deg;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg:      #08080e;
+    --bg-glow: #191436;
+    --ink:     #f2f3f8;
+    --muted:   #9aa0b5;
+    --panel:   #ffffff12;
+    --line:    #ffffff20;
+  }
+}
+:root[data-theme="dark"] {
+  --bg:      #08080e;
+  --bg-glow: #191436;
+  --ink:     #f2f3f8;
+  --muted:   #9aa0b5;
+  --panel:   #ffffff12;
+  --line:    #ffffff20;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(16px, 3vw, 28px);
+  padding: clamp(20px, 5vw, 48px) 16px;
+  background:
+    radial-gradient(130% 80% at 50% 0%, var(--bg-glow) 0%, transparent 62%),
+    var(--bg);
+  color: var(--ink);
+  font: 15px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  overflow-x: hidden;
+}
+
+/* ---------------- stage ---------------- */
+
+.stage {
+  --w: clamp(258px, 74vw, 320px);
+  --h: calc(var(--w) * 88 / 63);
+  width: var(--w);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  perspective: 1300px;
+  perspective-origin: 50% 42%;
+  touch-action: none;
+
+  /* default finish: rainbow */
+  --foil-a: repeating-linear-gradient(102deg,
+    hsl(340 92% 58%)  0%,  hsl(18 95% 58%)  4%,  hsl(52 95% 60%)  8%,
+    hsl(142 85% 55%) 13%,  hsl(190 92% 58%) 18%, hsl(248 92% 62%) 23%,
+    hsl(302 92% 60%) 28%,  hsl(340 92% 58%) 33%);
+  --foil-b: repeating-linear-gradient(-16deg,
+    #05040f 0%, #7b7bff 3%, #05040f 7%, #05040f 13%);
+  --foil-blend: color-dodge;
+  --foil-mix: color-dodge;
+  --foil-power: 1;
+}
+
+.deck {
+  width: 100%;
+  height: var(--h);
+  position: relative;
+  transform-style: preserve-3d;
+  transform:
+    rotateX(var(--rx))
+    rotateY(calc(var(--ry) + var(--flip)))
+    translateZ(calc(var(--active) * 22px));
+  transition: transform 750ms cubic-bezier(.16, 1, .3, 1);
+  will-change: transform;
+  cursor: grab;
+}
+.stage.is-live .deck { transition: transform 80ms linear; }
+.deck:focus-visible { outline: none; }
+.deck:focus-visible ~ .reflection { opacity: .34; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .stage:not(.is-live) .deck { animation: drift 9s ease-in-out infinite; }
+}
+@keyframes drift {
+  0%, 100% { translate: 0 4px;  }
+  50%      { translate: 0 -8px; }
+}
+
+/* ---------------- card faces ---------------- */
+
+.face {
+  position: absolute;
+  inset: 0;
+  border-radius: 5.4% / 3.9%;
+  overflow: hidden;
+  backface-visibility: hidden;
+  isolation: isolate;
+  background:
+    radial-gradient(120% 90% at 50% 0%, #241a55 0%, #12102e 45%, #0a0820 100%);
+  box-shadow:
+    0 0 0 1px #00000080,
+    0 26px 50px -18px rgba(8, 4, 34, calc(.5 + var(--active) * .3));
+}
+.face--back { transform: rotateY(180deg); }
+
+/* ---------------- front layout ---------------- */
+
+.frame {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: grid;
+  grid-template-rows: auto auto auto 1fr auto;
+  gap: 2.6%;
+  padding: 5% 5.4% 4.6%;
+  color: #f4f2ff;
+  font-size: calc(var(--w) * 0.0375);
+}
+
+.titlebar { display: flex; align-items: baseline; justify-content: space-between; gap: .5em; }
+.name {
+  margin: 0;
+  font-size: 1.5em;
+  font-weight: 800;
+  letter-spacing: -.005em;
+  line-height: 1;
+  text-shadow: 0 1px 2px #00000099;
+}
+.hp { font-weight: 800; font-size: 1.2em; letter-spacing: -.03em; white-space: nowrap; }
+.hp small { font-size: .52em; font-weight: 700; opacity: .75; margin-right: .3em; letter-spacing: .1em; }
+
+/* art window */
+.window {
+  position: relative;
+  aspect-ratio: 63 / 47;
+  border-radius: .55em;
+  overflow: hidden;
+  padding: 2px;
+  background: linear-gradient(calc(var(--px) * 160deg + 100deg),
+    #6f7bd8, #e9e4ff 22%, #8f6fd0 45%, #f6efc9 62%, #5c67b8 85%, #d9d3ff);
+  box-shadow: 0 2px 10px #00000066;
+}
+.window svg { display: block; width: 100%; height: 100%; border-radius: .42em; }
+
+.species {
+  margin: 0;
+  font-size: .74em;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: #d3d9ff;
+  text-align: center;
+}
+
+/* attacks */
+.plate {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 46%;
+  background: linear-gradient(180deg, #0a0820 0%, #0a0820e6 22%, #0a0820f2 100%);
+  -webkit-mask-image: linear-gradient(180deg, #0000 0%, #000 26%, #000 100%);
+          mask-image: linear-gradient(180deg, #0000 0%, #000 26%, #000 100%);
+  opacity: .72;
+  z-index: -1;          /* behind the card text, still above the foil */
+  pointer-events: none;
+}
+
+.moves {
+  align-self: start;
+  display: grid;
+  gap: .55em;
+  width: 100%;
+}
+.move { display: flex; align-items: center; gap: .45em; }
+.move + .move { border-top: 1px solid #ffffff1f; padding-top: .5em; }
+.pip {
+  width: 1.1em; height: 1.1em; flex: none;
+  border-radius: 50%;
+  background: radial-gradient(circle at 33% 28%, #fff, var(--pip, #6ad9ff) 60%, #00000070);
+  box-shadow: 0 0 .45em var(--pip, #6ad9ff);
+}
+.move b { font-weight: 700; }
+.move .dmg { margin-left: auto; font-weight: 800; font-size: 1.12em; letter-spacing: -.03em; }
+
+.rules {
+  margin: 0;
+  font-size: .72em;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: #bcc3f0;
+  border-top: 1px solid #ffffff24;
+  padding-top: .5em;
+}
+
+.footer { display: grid; gap: .45em; }
+.flavor {
+  margin: 0;
+  font-size: .78em;
+  font-style: italic;
+  line-height: 1.3;
+  color: #e4e1ff;
+}
+.meta {
+  display: flex;
+  justify-content: space-between;
+  gap: .5em;
+  font-size: .68em;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: #b3b9e4;
+}
+.meta .rare { color: #ffd98a; letter-spacing: .04em; }
+
+/* ---------------- back face ---------------- */
+
+.face--back .foil   { opacity: calc(.3 + var(--active) * .3); }
+.face--back .sparkle { opacity: calc(.08 + var(--active) * .3); }
+
+.face--back .backdrop {
+  position: absolute; inset: 0;
+  background: radial-gradient(circle at 50% 44%, #3d2680 0%, #1e1449 46%, #08061c 100%);
+}
+.face--back .rosette {
+  position: absolute; inset: 7%;
+  border-radius: 3.5%;
+  border: 2px solid #ffffff2e;
+  background:
+    repeating-conic-gradient(from 0deg at 50% 50%, #ffffff12 0deg 5deg, transparent 5deg 10deg),
+    repeating-radial-gradient(circle at 50% 50%, #ffffff0f 0 5px, transparent 5px 13px);
+}
+.face--back .mark {
+  position: absolute; inset: 0;
+  z-index: 3;              /* above the foil, like the front's frame */
+  display: grid; place-content: center;
+}
+.face--back .plaque {
+  display: grid; justify-items: center; gap: .55em;
+  padding: .9em 1.4em 1em;
+  border-radius: .7em;
+  background: linear-gradient(180deg, #120d33e6, #08061cf2);
+  border: 1px solid #ffffff33;
+  box-shadow: 0 0 0 1px #00000055, 0 8px 24px #04030fa8;
+  text-align: center;
+  color: #fff;
+  text-shadow: 0 2px 10px #000;
+}
+.face--back .mark span {
+  font-size: calc(var(--w) * 0.115);
+  font-weight: 900;
+  letter-spacing: .1em;
+}
+.face--back .mark em {
+  font-style: normal;
+  font-size: calc(var(--w) * 0.03);
+  letter-spacing: .42em;
+  color: #ddd6ff;
+}
+
+/* ---------------- holographic layers ---------------- */
+
+/* Rainbow foil sheet, sliding under the tilt. */
+.foil {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background-image: var(--foil-a), var(--foil-b);
+  background-blend-mode: var(--foil-blend);
+  background-size: 145% 145%, 115% 115%;
+  background-position:
+    calc(30% + (var(--px) - .5) * -230%) calc(30% + (var(--py) - .5) * -230%),
+    calc(50% + (var(--px) - .5) *  170%) calc(50% + (var(--py) - .5) *  170%);
+  mix-blend-mode: var(--foil-mix);
+  filter: brightness(calc((.3 + var(--active) * .26) * var(--foil-power))) contrast(1.45) saturate(1.3);
+  opacity: calc(.42 + var(--active) * .38);
+  transition: opacity 450ms ease, filter 450ms ease;
+}
+/* A second, softer sweep keeps flat areas from banding. */
+.foil::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    calc(var(--px) * 120deg + 70deg),
+    #00000000 41%, #ffffff33 49%, #b9a6ff2b 53%, #00000000 61%);
+  mix-blend-mode: soft-light;
+  opacity: calc(.5 + var(--active) * .5);
+}
+
+/* Glitter: turbulence speckle crushed into sparks, tinted by a slow conic. */
+.sparkle {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' seed='11'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 1.1 0 0 0 -0.42'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)'/%3E%3C/svg%3E"),
+    conic-gradient(from calc(var(--px) * 300deg) at 50% 50%,
+      #ff2f9e, #ffd166 25%, #6afff0 50%, #7a5cff 75%, #ff2f9e);
+  background-size: 42% 42%, 100% 100%;
+  background-position:
+    calc(var(--px) * 130%) calc(var(--py) * 130%),
+    50% 50%;
+  background-blend-mode: multiply;
+  mix-blend-mode: color-dodge;
+  filter: brightness(1.35) contrast(5) saturate(1.3);
+  opacity: calc(.1 + var(--active) * .38);
+  transition: opacity 450ms ease;
+}
+
+/* Specular glare that tracks the pointer. */
+.glare {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  background: radial-gradient(
+    farthest-corner circle at calc(var(--px) * 100%) calc(var(--py) * 100%),
+    #ffffffcc 2%,
+    #ffffff3d 14%,
+    #8f9dff21 34%,
+    #05030f00 66%);
+  mix-blend-mode: overlay;
+  opacity: calc(.22 + var(--active) * .4);
+  transition: opacity 450ms ease;
+}
+
+/* Bevelled edge, always on top. */
+.edge {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  border-radius: inherit;
+  box-shadow:
+    0 0 0 1px #ffffff30 inset,
+    0 0 0 5px #0a081cb3 inset,
+    0 0 0 6px #ffffff1c inset;
+}
+.edge::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    calc(var(--px) * 200deg + 50deg),
+    #ffffff00 42%, #ffffff4d 50%, #ffffff00 58%);
+  opacity: calc(var(--active) * .75);
+}
+
+/* ---------------- finishes ---------------- */
+
+.stage.finish-cosmos {
+  --foil-a: repeating-linear-gradient(74deg,
+    #0b0730  0%, #3b1fa8  3%, #8a3bff  6%, #ff5ce0  9%,
+    #38d8ff 13%, #123a9e 17%, #0b0730 22%);
+  --foil-b: repeating-linear-gradient(-32deg,
+    #0a0820 0%, #d5d6ff 2%, #0a0820 5%, #0a0820 14%);
+  --foil-blend: screen;
+  --foil-mix: hard-light;
+}
+/* hard-light keeps deep space deep instead of dodging it to lavender */
+.stage.finish-cosmos .foil {
+  background-size: 150% 150%, 120% 120%;
+  filter: brightness(calc(.8 + var(--active) * .22)) contrast(1.3) saturate(1.5);
+  opacity: calc(.55 + var(--active) * .35);
+}
+/* the glitter layer doubles as this finish's starfield */
+.stage.finish-cosmos .sparkle {
+  opacity: calc(.26 + var(--active) * .48);
+  filter: brightness(1.5) contrast(7) saturate(1.1);
+}
+
+.stage.finish-prism {
+  --foil-a: repeating-linear-gradient(44deg,
+    #ff0059 0%, #ffea00 3%, #00ff9d 6%, #00c3ff 9%, #8b00ff 12%, #ff0059 15%);
+  --foil-b: repeating-linear-gradient(-46deg,
+    #04040e 0%, #ffffff 1.4%, #04040e 3%, #04040e 8%);
+  --foil-blend: color-dodge;
+  --foil-power: .9;
+}
+.stage.finish-prism .foil { background-size: 78% 78%, 62% 62%; }
+
+.stage.finish-gold {
+  --foil-a: repeating-linear-gradient(96deg,
+    #3a2400 0%, #ffd77a 3.5%, #fff6d4 6%, #c98c1e 10%, #3a2400 15%);
+  --foil-b: repeating-linear-gradient(-26deg,
+    #0d0700 0%, #ffcf6a 2.5%, #0d0700 7%, #0d0700 16%);
+  --foil-blend: color-dodge;
+  --foil-mix: hard-light;
+  --foil-power: 1;
+}
+.stage.finish-gold .foil {
+  filter: brightness(calc(.74 + var(--active) * .2)) contrast(1.2) saturate(1.2);
+  opacity: calc(.5 + var(--active) * .32);
+}
+.stage.finish-gold .plate { background: linear-gradient(180deg, #17110a 0%, #17110ae6 22%, #17110af2 100%); }
+.stage.finish-gold .sparkle { filter: brightness(1.3) contrast(5) sepia(.55) saturate(2.4); }
+.stage.finish-gold .window {
+  background: linear-gradient(calc(var(--px) * 160deg + 100deg),
+    #8a6a1e, #ffeaa7 22%, #b8871f 45%, #fff6d4 62%, #6f5312 85%, #ffe08a);
+}
+
+/* ---------------- reflection ---------------- */
+
+.reflection {
+  position: relative;
+  width: 100%;
+  height: calc(var(--h) * .36);
+  margin-top: 1.5%;
+  overflow: hidden;
+  opacity: .3;
+  filter: blur(1.3px) saturate(1.15);
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #0009 34%, #0000 88%);
+          mask-image: linear-gradient(to bottom, #000 0%, #0009 34%, #0000 88%);
+  pointer-events: none;
+}
+.mirror {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%;
+  height: var(--h);
+  transform-style: preserve-3d;
+  transform:
+    scaleY(-1)
+    rotateX(calc(var(--rx) * -1))
+    rotateY(calc(var(--ry) + var(--flip)));
+  transition: transform 750ms cubic-bezier(.16, 1, .3, 1);
+}
+.stage.is-live .mirror { transition: transform 80ms linear; }
+.mirror .deck {
+  transform: none;
+  transition: none;
+  animation: none;
+  cursor: default;
+}
+.mirror .face { box-shadow: none; }
+
+/* Pool of coloured light the card throws onto the surface. */
+.pool {
+  width: 108%;
+  height: calc(var(--h) * .1);
+  margin-top: calc(var(--h) * -.26);
+  border-radius: 50%;
+  background: radial-gradient(closest-side,
+    hsl(calc(var(--px) * 300deg + 190) 90% 62% / calc(.22 + var(--active) * .3)),
+    transparent 72%);
+  filter: blur(16px);
+  pointer-events: none;
+}
+
+/* ---------------- chrome ---------------- */
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  max-width: 460px;
+}
+button {
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 8px 15px;
+  cursor: pointer;
+  transition: transform 120ms ease, border-color 120ms ease, background 120ms ease;
+  -webkit-backdrop-filter: blur(6px);
+          backdrop-filter: blur(6px);
+}
+button:hover { transform: translateY(-1px); border-color: #8b7bff88; }
+button:active { transform: translateY(0); }
+button[aria-pressed="true"] {
+  background: linear-gradient(100deg, #ff4fd8, #7a5cff 48%, #00d5ff);
+  border-color: transparent;
+  color: #fff;
+}
+button:focus-visible { outline: 2px solid #7a5cff; outline-offset: 2px; }
+
+.hint {
+  margin: 0;
+  font-size: 12.5px;
+  letter-spacing: .03em;
+  color: var(--muted);
+  text-align: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .deck, .mirror { transition: none; }
+}
+</style>
+</head>
+<body>
+
+<div class="stage finish-rainbow" id="stage">
+  <div class="deck" id="deck">
+
+    <!-- ===================== FRONT ===================== -->
+    <div class="face face--front" id="front">
+
+      <div class="frame">
+        <div class="plate" aria-hidden="true"></div>
+        <div class="titlebar">
+          <h1 class="name">Aurora Drake</h1>
+          <span class="hp"><small>HP</small>130</span>
+        </div>
+
+        <div class="window">
+          <svg viewBox="0 0 630 470" role="img"
+               aria-label="A winged drake banking past the moon above aurora-lit peaks">
+            <defs>
+              <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%"   stop-color="#0d0631"/>
+                <stop offset="38%"  stop-color="#22155f"/>
+                <stop offset="72%"  stop-color="#164471"/>
+                <stop offset="100%" stop-color="#081231"/>
+              </linearGradient>
+              <radialGradient id="moon" cx="42%" cy="36%" r="64%">
+                <stop offset="0%"   stop-color="#fffdf4"/>
+                <stop offset="70%"  stop-color="#ffeec6"/>
+                <stop offset="100%" stop-color="#ffd88c"/>
+              </radialGradient>
+              <radialGradient id="halo">
+                <stop offset="0%"   stop-color="#ffe6a8" stop-opacity=".5"/>
+                <stop offset="100%" stop-color="#ffe6a8" stop-opacity="0"/>
+              </radialGradient>
+              <linearGradient id="aur1" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%"   stop-color="#00ffc3" stop-opacity="0"/>
+                <stop offset="45%"  stop-color="#4affd6" stop-opacity=".8"/>
+                <stop offset="100%" stop-color="#7a5cff" stop-opacity="0"/>
+              </linearGradient>
+              <linearGradient id="aur2" x1="1" y1="0" x2="0" y2="1">
+                <stop offset="0%"   stop-color="#ff5ad4" stop-opacity="0"/>
+                <stop offset="52%"  stop-color="#c08cff" stop-opacity=".6"/>
+                <stop offset="100%" stop-color="#00d5ff" stop-opacity="0"/>
+              </linearGradient>
+              <linearGradient id="ridgeA" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%"   stop-color="#3b2a7e"/>
+                <stop offset="100%" stop-color="#150d38"/>
+              </linearGradient>
+              <linearGradient id="ridgeB" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%"   stop-color="#170e3c"/>
+                <stop offset="100%" stop-color="#070414"/>
+              </linearGradient>
+              <linearGradient id="haze" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%"   stop-color="#4affd6" stop-opacity="0"/>
+                <stop offset="45%"  stop-color="#4affd6" stop-opacity=".15"/>
+                <stop offset="100%" stop-color="#4affd6" stop-opacity="0"/>
+              </linearGradient>
+              <linearGradient id="water" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%"   stop-color="#123a63"/>
+                <stop offset="100%" stop-color="#050c22"/>
+              </linearGradient>
+              <linearGradient id="scale" x1="0.1" y1="0" x2="0.9" y2="1">
+                <stop offset="0%"   stop-color="#4b2b86"/>
+                <stop offset="45%"  stop-color="#1b1043"/>
+                <stop offset="100%" stop-color="#070417"/>
+              </linearGradient>
+              <filter id="soft"   x="-45%" y="-45%" width="190%" height="190%">
+                <feGaussianBlur stdDeviation="15"/>
+              </filter>
+              <filter id="softer" x="-45%" y="-45%" width="190%" height="190%">
+                <feGaussianBlur stdDeviation="30"/>
+              </filter>
+              <filter id="rim" x="-25%" y="-25%" width="150%" height="150%">
+                <feDropShadow dx="0" dy="0" stdDeviation="7"
+                              flood-color="#7ce8ff" flood-opacity=".42"/>
+              </filter>
+            </defs>
+
+            <rect width="630" height="470" fill="url(#sky)"/>
+
+            <g fill="#fff">
+              <circle cx="52"  cy="48"  r="2.0" opacity=".85"/>
+              <circle cx="118" cy="96"  r="1.3" opacity=".55"/>
+              <circle cx="188" cy="34"  r="1.7" opacity=".75"/>
+              <circle cx="268" cy="88"  r="1.1" opacity=".5"/>
+              <circle cx="344" cy="30"  r="2.1" opacity=".85"/>
+              <circle cx="432" cy="92"  r="1.4" opacity=".65"/>
+              <circle cx="524" cy="44"  r="1.8" opacity=".8"/>
+              <circle cx="592" cy="104" r="1.3" opacity=".6"/>
+              <circle cx="86"  cy="166" r="1.5" opacity=".6"/>
+              <circle cx="600" cy="200" r="1.4" opacity=".55"/>
+              <circle cx="24"  cy="252" r="1.2" opacity=".5"/>
+              <circle cx="572" cy="270" r="1.1" opacity=".45"/>
+            </g>
+
+            <!-- aurora curtains -->
+            <g filter="url(#soft)">
+              <path d="M-40 210 C 120 114, 236 264, 392 152 S 618 84, 700 164
+                       L 700 282 C 596 198, 430 324, 300 254 S 90 296, -40 332 Z"
+                    fill="url(#aur1)" opacity=".72"/>
+              <path d="M-40 156 C 116 230, 258 88, 414 150 S 636 202, 700 118
+                       L 700 224 C 566 298, 382 174, 246 234 S 58 266, -40 222 Z"
+                    fill="url(#aur2)" opacity=".55"/>
+            </g>
+
+            <!-- moon -->
+            <circle cx="392" cy="150" r="150" fill="url(#halo)" filter="url(#softer)"/>
+            <circle cx="392" cy="150" r="74" fill="url(#moon)"/>
+            <g fill="#e8d4a6" opacity=".45">
+              <circle cx="374" cy="130" r="14"/>
+              <circle cx="412" cy="172" r="10"/>
+              <circle cx="388" cy="184" r="6"/>
+              <circle cx="424" cy="126" r="5"/>
+            </g>
+
+
+            <!-- ridges -->
+            <rect y="352" width="630" height="80" fill="url(#haze)"/>
+            <path d="M0 404 L 78 352 L 132 388 L 214 334 L 268 376 L 336 402
+                     L 404 362 L 470 412 L 540 378 L 630 416 L 630 470 L 0 470 Z"
+                  fill="url(#ridgeA)"/>
+            <g fill="#8f9ce8" opacity=".16">
+              <path d="M214 334 L 268 376 L 214 404 Z"/>
+              <path d="M78 352 L 132 388 L 78 404 Z"/>
+              <path d="M404 362 L 470 412 L 404 404 Z"/>
+              <path d="M540 378 L 630 416 L 540 412 Z"/>
+            </g>
+            <g stroke="#dfe4ff" stroke-width="2.5" fill="none" opacity=".32"
+               stroke-linejoin="round">
+              <path d="M196 350 L 214 334 L 232 351"/>
+              <path d="M64 366 L 78 352 L 92 366"/>
+              <path d="M390 376 L 404 362 L 418 377"/>
+            </g>
+            <path d="M0 412 L 68 390 L 154 416 L 258 386 L 356 418 L 452 396 L 630 422
+                     L 630 428 L 0 428 Z"
+                  fill="url(#ridgeB)"/>
+
+            <!-- still water -->
+            <rect y="426" width="630" height="44" fill="url(#water)"/>
+            <ellipse cx="392" cy="446" rx="54" ry="20" fill="#ffe6a8"
+                     opacity=".28" filter="url(#soft)"/>
+            <g stroke="#9df0e4" stroke-linecap="round" opacity=".22">
+              <path d="M44 438 H 146"  stroke-width="1.4"/>
+              <path d="M486 444 H 592" stroke-width="1.4"/>
+              <path d="M112 456 H 232" stroke-width="1.2"/>
+              <path d="M320 462 H 402" stroke-width="1.2"/>
+              <path d="M430 434 H 470" stroke-width="1"/>
+            </g>
+            <!-- ================= drake ================= -->
+            <g filter="url(#rim)">
+              <g fill="url(#scale)">
+                <!-- far wing, behind the body -->
+                <path d="M334 250
+                         C 300 188, 228 110, 110 66
+                         Q 191 152, 168 158
+                         Q 253 214, 232 214
+                         Q 308 247, 288 256
+                         Q 330 264, 338 250 Z" opacity=".92"/>
+
+                <!-- tail -->
+                <path d="M254 298
+                         C 220 322, 170 344, 112 350
+                         C 84 352, 62 364, 52 384
+                         C 68 372, 88 366, 108 366
+                         C 166 366, 222 340, 264 312 Z"/>
+                <path d="M62 370 L 22 350 L 40 380 L 16 402 L 60 392 Z"/>
+
+                <!-- torso -->
+                <path d="M246 306
+                         C 250 276, 276 252, 312 240
+                         C 344 230, 374 232, 390 246
+                         C 372 270, 342 288, 306 300
+                         C 282 308, 260 312, 246 306 Z"/>
+
+                <!-- limbs -->
+                <path d="M300 300 C 298 318, 288 330, 272 338
+                         C 284 320, 286 310, 284 298 Z"/>
+                <path d="M338 286 C 338 304, 328 316, 312 324
+                         C 324 306, 326 296, 324 284 Z"/>
+
+                <!-- neck and head -->
+                <path d="M372 236
+                         C 390 218, 404 200, 420 184
+                         C 440 164, 470 148, 508 140
+                         C 498 160, 486 172, 472 180
+                         C 476 190, 468 198, 456 198
+                         C 442 198, 428 206, 418 218
+                         C 408 230, 398 244, 392 254 Z"/>
+
+                <!-- horns -->
+                <path d="M484 152 L 430 120 L 446 144 L 476 158 Z"/>
+                <path d="M496 142 L 454 104 L 464 132 L 492 152 Z"/>
+
+                <!-- near wing, in front and below -->
+                <path d="M336 262
+                         C 410 256, 496 286, 556 330
+                         Q 483 324, 492 352
+                         Q 427 318, 430 352
+                         Q 379 313, 376 338
+                         Q 350 330, 322 308 Z"/>
+              </g>
+
+              <!-- membrane bones -->
+              <g stroke="#7c5ec9" stroke-width="2" opacity=".45" fill="none" stroke-linecap="round">
+                <path d="M330 252 L 118 76"/>
+                <path d="M330 252 L 172 160"/>
+                <path d="M330 252 L 234 214"/>
+                <path d="M344 268 L 548 330"/>
+                <path d="M344 268 L 488 350"/>
+                <path d="M344 268 L 430 350"/>
+              </g>
+
+              <!-- rim light along the leading edges -->
+              <path d="M110 66 C 228 110, 300 188, 334 250" fill="none"
+                    stroke="#9b86ff" stroke-width="3" opacity=".55"/>
+              <path d="M336 262 C 410 256, 496 286, 556 330" fill="none"
+                    stroke="#7ef2ff" stroke-width="3" opacity=".6"/>
+              <path d="M372 236 C 390 218, 404 200, 420 184 C 440 164, 470 148, 508 140"
+                    fill="none" stroke="#9dfaff" stroke-width="2.6" opacity=".7"/>
+              <circle cx="482" cy="166" r="4.2" fill="#c8ffff"/>
+            </g>
+
+          </svg>
+        </div>
+
+        <p class="species">Stage 2 · Celestial Serpent</p>
+
+        <div class="moves">
+          <div class="move" style="--pip:#6ad9ff">
+            <span class="pip"></span>
+            <b>Prism Breath</b>
+            <span class="dmg">70</span>
+          </div>
+          <div class="move" style="--pip:#ff7ad9">
+            <span class="pip"></span>
+            <span class="pip" style="--pip:#ffd166"></span>
+            <b>Solar Flare Dive</b>
+            <span class="dmg">120</span>
+          </div>
+          <p class="rules">Weakness ×2 Void · Resist −30 Storm · Retreat ✦✦</p>
+        </div>
+
+        <div class="footer">
+          <p class="flavor">It sheds light in colours the sky has no name for.</p>
+          <div class="meta">
+            <span>Illus. Claude</span>
+            <span class="rare">★★★ Secret Rare</span>
+            <span>001/121</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="foil"></div>
+      <div class="sparkle"></div>
+      <div class="glare"></div>
+      <div class="edge"></div>
+    </div>
+
+    <!-- ===================== BACK ===================== -->
+    <div class="face face--back">
+      <div class="backdrop"></div>
+      <div class="rosette"></div>
+      <div class="mark">
+        <div class="plaque">
+          <span>GAS</span>
+          <em>HOLO SERIES</em>
+        </div>
+      </div>
+      <div class="foil"></div>
+      <div class="sparkle"></div>
+      <div class="glare"></div>
+      <div class="edge"></div>
+    </div>
+
+  </div>
+
+  <div class="reflection" aria-hidden="true"><div class="mirror" id="mirror"></div></div>
+  <div class="pool" aria-hidden="true"></div>
+</div>
+
+<div class="controls" id="controls">
+  <button type="button" data-finish="rainbow" aria-pressed="true">Rainbow</button>
+  <button type="button" data-finish="cosmos"  aria-pressed="false">Cosmos</button>
+  <button type="button" data-finish="prism"   aria-pressed="false">Prism</button>
+  <button type="button" data-finish="gold"    aria-pressed="false">Gold</button>
+  <button type="button" id="flip">Flip</button>
+  <button type="button" id="tilt" aria-pressed="false" hidden>Use device tilt</button>
+</div>
+
+<p class="hint" id="hint">Move the pointer across the card — or drag it on a touchscreen.</p>
+
+<script>
+(() => {
+  const stage  = document.getElementById('stage');
+  const deck   = document.getElementById('deck');
+  const front  = document.getElementById('front');
+  const mirror = document.getElementById('mirror');
+  const hint   = document.getElementById('hint');
+
+  const MAX_TILT = 16;   // degrees of rotation at the card's edge
+
+  /* Mirrored copy of the whole card. It lives outside .deck but inside
+     .stage, so it inherits exactly the same --px / --rx / foil vars, and
+     because both faces come along the reflection follows the flip. */
+  const clone = deck.cloneNode(true);
+  clone.removeAttribute('id');
+  clone.removeAttribute('tabindex');
+  clone.querySelectorAll('[id]').forEach(n => n.removeAttribute('id'));
+  clone.setAttribute('aria-hidden', 'true');
+  clone.setAttribute('inert', '');
+  mirror.appendChild(clone);
+
+  /* ---------- tilt state, committed once per frame ---------- */
+  let raf = null;
+  const at = { px: 0.5, py: 0.5 };
+
+  function commit() {
+    raf = null;
+    stage.style.setProperty('--px', at.px.toFixed(4));
+    stage.style.setProperty('--py', at.py.toFixed(4));
+    stage.style.setProperty('--rx', ((0.5 - at.py) * 2 * MAX_TILT).toFixed(2) + 'deg');
+    stage.style.setProperty('--ry', ((at.px - 0.5) * 2 * MAX_TILT).toFixed(2) + 'deg');
+  }
+
+  const clamp = v => Math.min(1, Math.max(0, v));
+
+  function set(px, py) {
+    at.px = clamp(px);
+    at.py = clamp(py);
+    if (raf === null) raf = requestAnimationFrame(commit);
+  }
+
+  function engage(on) {
+    stage.classList.toggle('is-live', on);
+    stage.style.setProperty('--active', on ? '1' : '0');
+    if (!on) set(0.5, 0.5);
+  }
+
+  /* ---------- pointer ---------- */
+  function track(e) {
+    const r = deck.getBoundingClientRect();
+    set((e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height);
+  }
+
+  deck.addEventListener('pointerenter', e => { engage(true); track(e); });
+  deck.addEventListener('pointermove', track);
+  deck.addEventListener('pointerleave', () => { if (!gyroOn) engage(false); });
+  deck.addEventListener('pointerdown', e => {
+    deck.setPointerCapture(e.pointerId);
+    engage(true);
+    track(e);
+  });
+  deck.addEventListener('pointerup', e => {
+    if (e.pointerType !== 'mouse' && !gyroOn) engage(false);
+  });
+
+  /* ---------- keyboard ---------- */
+  deck.tabIndex = 0;
+  deck.setAttribute('role', 'button');
+  deck.setAttribute('aria-label',
+    'Aurora Drake holographic trading card, 130 HP. Arrow keys tilt the card; Enter flips it.');
+  deck.addEventListener('keydown', e => {
+    const step = 0.14;
+    const nudge = {
+      ArrowLeft: [-step, 0], ArrowRight: [step, 0],
+      ArrowUp: [0, -step],   ArrowDown: [0, step],
+    }[e.key];
+    if (nudge) {
+      e.preventDefault();
+      engage(true);
+      set(at.px + nudge[0], at.py + nudge[1]);
+    } else if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      flip();
+    }
+  });
+  deck.addEventListener('blur', () => { if (!gyroOn) engage(false); });
+
+  /* ---------- flip ---------- */
+  const flipBtn = document.getElementById('flip');
+  let flipped = false;
+  function flip() {
+    flipped = !flipped;
+    stage.style.setProperty('--flip', flipped ? '180deg' : '0deg');
+    flipBtn.setAttribute('aria-pressed', String(flipped));
+    deck.setAttribute('aria-label', flipped
+      ? 'Card back, GAS Holo Series. Enter flips it to the front.'
+      : 'Aurora Drake holographic trading card, 130 HP. Arrow keys tilt the card; Enter flips it.');
+  }
+  flipBtn.addEventListener('click', flip);
+
+  /* ---------- finishes ---------- */
+  const controls = document.getElementById('controls');
+  controls.addEventListener('click', e => {
+    const btn = e.target.closest('[data-finish]');
+    if (!btn) return;
+    controls.querySelectorAll('[data-finish]').forEach(b =>
+      b.setAttribute('aria-pressed', String(b === btn)));
+    stage.classList.forEach(c => {
+      if (c.startsWith('finish-')) stage.classList.remove(c);
+    });
+    stage.classList.add('finish-' + btn.dataset.finish);
+  });
+
+  /* ---------- device orientation ---------- */
+  const tiltBtn = document.getElementById('tilt');
+  let gyroOn = false;
+  let base = null;   // orientation when tilt tracking started
+
+  function onOrient(e) {
+    if (e.beta === null || e.gamma === null) return;
+    if (!base) base = { beta: e.beta, gamma: e.gamma };
+    const dx = Math.max(-40, Math.min(40, e.gamma - base.gamma));
+    const dy = Math.max(-40, Math.min(40, e.beta - base.beta));
+    set(0.5 + dx / 80, 0.5 + dy / 80);
+  }
+
+  if (window.DeviceOrientationEvent && matchMedia('(pointer: coarse)').matches) {
+    tiltBtn.hidden = false;
+    tiltBtn.addEventListener('click', async () => {
+      if (gyroOn) {
+        removeEventListener('deviceorientation', onOrient);
+        gyroOn = false;
+        base = null;
+        tiltBtn.setAttribute('aria-pressed', 'false');
+        engage(false);
+        hint.textContent = 'Drag across the card to catch the light.';
+        return;
+      }
+      const ask = window.DeviceOrientationEvent.requestPermission;
+      if (typeof ask === 'function') {
+        try {
+          if (await ask() !== 'granted') {
+            hint.textContent = 'Motion access denied — drag the card instead.';
+            return;
+          }
+        } catch { return; }
+      }
+      addEventListener('deviceorientation', onOrient);
+      gyroOn = true;
+      tiltBtn.setAttribute('aria-pressed', 'true');
+      engage(true);
+      hint.textContent = 'Tilt your phone to catch the light.';
+    });
+    hint.textContent = 'Drag across the card to catch the light.';
+  }
+})();
+</script>
+</body>
+</html>
