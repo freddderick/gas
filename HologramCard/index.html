@@ -4,6 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Aurora Drake</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Archivo:ital,wght@0,400..800;1,400..600&family=Archivo+Black&display=swap">
 <style>
 /* ------------------------------------------------------------------
    Reflective hologram trading card
@@ -21,6 +25,9 @@
   --muted:   #5c6070;
   --panel:   #ffffffcc;
   --line:    #00000018;
+
+  --font-display: "Archivo Black", "Arial Black", ui-sans-serif, system-ui, sans-serif;
+  --font-ui: "Archivo", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 
   /* Live state, written by JS. */
   --px: 0.5;      /* pointer position across the card, 0..1 */
@@ -65,7 +72,7 @@ body {
     radial-gradient(130% 80% at 50% 0%, var(--bg-glow) 0%, transparent 62%),
     var(--bg);
   color: var(--ink);
-  font: 15px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font: 15px/1.5 var(--font-ui);
   overflow-x: hidden;
 }
 
@@ -147,20 +154,32 @@ body {
   gap: 2.6%;
   padding: 5% 5.4% 4.6%;
   color: #f4f2ff;
+  font-family: var(--font-ui);
   font-size: calc(var(--w) * 0.0375);
 }
 
 .titlebar { display: flex; align-items: baseline; justify-content: space-between; gap: .5em; }
 .name {
   margin: 0;
-  font-size: 1.5em;
-  font-weight: 800;
-  letter-spacing: -.005em;
+  font-family: var(--font-display);
+  font-size: 1.42em;
+  font-weight: 400;
+  letter-spacing: -.012em;
   line-height: 1;
   text-shadow: 0 1px 2px #00000099;
 }
-.hp { font-weight: 800; font-size: 1.2em; letter-spacing: -.03em; white-space: nowrap; }
-.hp small { font-size: .52em; font-weight: 700; opacity: .75; margin-right: .3em; letter-spacing: .1em; }
+.hp {
+  font-family: var(--font-display);
+  font-size: 1.16em;
+  letter-spacing: -.02em;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.hp small {
+  font-family: var(--font-ui);
+  font-size: .54em; font-weight: 700; opacity: .75;
+  margin-right: .3em; letter-spacing: .12em;
+}
 
 /* art window */
 .window {
@@ -178,6 +197,7 @@ body {
 .species {
   margin: 0;
   font-size: .74em;
+  font-weight: 600;
   letter-spacing: .2em;
   text-transform: uppercase;
   color: #d3d9ff;
@@ -211,13 +231,20 @@ body {
   background: radial-gradient(circle at 33% 28%, #fff, var(--pip, #6ad9ff) 60%, #00000070);
   box-shadow: 0 0 .45em var(--pip, #6ad9ff);
 }
-.move b { font-weight: 700; }
-.move .dmg { margin-left: auto; font-weight: 800; font-size: 1.12em; letter-spacing: -.03em; }
+.move b { font-weight: 700; letter-spacing: -.004em; }
+.move .dmg {
+  margin-left: auto;
+  font-family: var(--font-display);
+  font-size: 1.06em;
+  letter-spacing: -.02em;
+  font-variant-numeric: tabular-nums;
+}
 
 .rules {
   margin: 0;
-  font-size: .72em;
-  letter-spacing: .06em;
+  font-size: .68em;
+  font-weight: 600;
+  letter-spacing: .035em;
   text-transform: uppercase;
   color: #bcc3f0;
   border-top: 1px solid #ffffff24;
@@ -237,9 +264,11 @@ body {
   justify-content: space-between;
   gap: .5em;
   font-size: .68em;
+  font-weight: 600;
   letter-spacing: .1em;
   text-transform: uppercase;
   color: #b3b9e4;
+  font-variant-numeric: tabular-nums;
 }
 .meta .rare { color: #ffd98a; letter-spacing: .04em; }
 
@@ -277,13 +306,14 @@ body {
   text-shadow: 0 2px 10px #000;
 }
 .face--back .mark span {
-  font-size: calc(var(--w) * 0.115);
-  font-weight: 900;
-  letter-spacing: .1em;
+  font-family: var(--font-display);
+  font-size: calc(var(--w) * 0.105);
+  letter-spacing: .09em;
 }
 .face--back .mark em {
   font-style: normal;
-  font-size: calc(var(--w) * 0.03);
+  font-weight: 600;
+  font-size: calc(var(--w) * 0.028);
   letter-spacing: .42em;
   color: #ddd6ff;
 }
@@ -765,7 +795,7 @@ button:focus-visible { outline: 2px solid #7a5cff; outline-offset: 2px; }
             <b>Solar Flare Dive</b>
             <span class="dmg">120</span>
           </div>
-          <p class="rules">Weakness ×2 Void · Resist −30 Storm · Retreat ✦✦</p>
+          <p class="rules">Weakness ×2 Void · Resist −30 · Retreat ✦✦</p>
         </div>
 
         <div class="footer">

@@ -1,8 +1,9 @@
 # Reflective Hologram Card
 
 A holographic trading card — *Aurora Drake*, 130 HP, ★★★ Secret Rare — that tilts,
-catches the light, and casts a reflection on the surface below. One self-contained
-HTML file: no build step, no dependencies, no network requests.
+catches the light, and casts a reflection on the surface below. One HTML file: no
+build step and no dependencies. The only external request is the Archivo webfont,
+which falls back cleanly to system faces offline.
 
 ```sh
 open HologramCard/index.html      # macOS
