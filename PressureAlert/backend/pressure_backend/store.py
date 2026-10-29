@@ -112,6 +112,12 @@ class Store:
             c.execute("DELETE FROM installs WHERE id = ?", (install_id,))
         self.gc_cells()
 
+    def delete_inactive_installs(self, older_than: int) -> int:
+        with self.db.tx() as c:
+            deleted = c.execute("DELETE FROM installs WHERE updated_at < ?", (older_than,)).rowcount
+        self.gc_cells()
+        return deleted
+
     def installs_in_cell(self, cell_id: str) -> list[Install]:
         return [_install(r) for r in self.db.query("SELECT * FROM installs WHERE cell_id = ?", (cell_id,))]
 

@@ -284,3 +284,13 @@ def test_apns_sender_builds_signed_request(tmp_path: Path):
 def test_apns_not_configured_is_reported():
     sender = APNsSender(Settings())
     assert asyncio.run(sender.send(PushMessage("abcd", "sandbox", "T", "B"))) == "not_configured"
+
+
+def test_inactive_installs_are_deleted_on_fetch(env):
+    http, store, meteo, sender, settings, client = env
+    iid = str(uuid.uuid4())
+    register(http, iid)
+    later = int(time.time()) + (settings.inactive_install_days + 1) * 86400
+    asyncio.run(poller.fetch_all(store, client, settings, now=later))
+    assert store.get_install(iid) is None
+    assert store.db.query("SELECT * FROM cells") == []

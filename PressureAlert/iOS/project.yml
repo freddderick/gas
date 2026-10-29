@@ -1,0 +1,89 @@
+name: PressureAlert
+options:
+  bundleIdPrefix: ca.andywood
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+configs:
+  Debug: debug
+  Release: release
+settings:
+  base:
+    SWIFT_VERSION: 5.0
+    DEVELOPMENT_TEAM: ""
+    CODE_SIGN_STYLE: Automatic
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "1"
+packages:
+  PressureCore:
+    path: PressureCore
+targets:
+  PressureAlert:
+    type: application
+    platform: iOS
+    sources:
+      - path: PressureAlert
+    dependencies:
+      - package: PressureCore
+    entitlements:
+      path: PressureAlert/Resources/PressureAlert.entitlements
+      properties:
+        aps-environment: development
+    info:
+      path: PressureAlert/Resources/Info.plist
+      properties:
+        CFBundleDisplayName: Pressure Alert
+        UILaunchScreen: {}
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+        NSLocationWhenInUseUsageDescription: "Pressure Alert uses your location once to find the pressure forecast for where you are. Your exact location is never stored or shared; alerts use an area about 10 km across."
+        NSMotionUsageDescription: "Pressure Alert can show a live reading from your phone's barometer. This reading is for interest only and is never used for alerts."
+        ITSAppUsesNonExemptEncryption: false
+        # Backend base URL, e.g. https://api.example.com. Leave blank for
+        # prototype mode: the app reads the free Open-Meteo endpoint directly
+        # and push alerts are off. Set per configuration in Build Settings.
+        PABackendURL: $(PA_BACKEND_URL)
+        CFBundleURLTypes:
+          - CFBundleURLName: ca.andywood.PressureAlert
+            CFBundleURLSchemes:
+              - pressurealert
+        UIBackgroundModes:
+          - remote-notification
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: ca.andywood.PressureAlert
+        TARGETED_DEVICE_FAMILY: "1"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        PA_BACKEND_URL: ""
+  PressureAlertTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: PressureAlertTests
+    dependencies:
+      - target: PressureAlert
+      - package: PressureCore
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: ca.andywood.PressureAlertTests
+schemes:
+  PressureAlert:
+    build:
+      targets:
+        PressureAlert: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - PressureAlertTests
+    archive:
+      config: Release

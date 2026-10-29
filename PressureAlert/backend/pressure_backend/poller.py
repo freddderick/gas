@@ -49,6 +49,9 @@ async def fetch_cell(store: Store, client: OpenMeteoClient, settings: Settings, 
 
 async def fetch_all(store: Store, client: OpenMeteoClient, settings: Settings, now: int | None = None) -> int:
     now = int(now or time.time())
+    removed = store.delete_inactive_installs(now - settings.inactive_install_days * 86400)
+    if removed:
+        log.info("deleted %d inactive installs", removed)
     cells = store.active_cells()
     semaphore = asyncio.Semaphore(FETCH_CONCURRENCY)
 

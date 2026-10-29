@@ -61,6 +61,9 @@ class Settings:
     stale_after_seconds: int = 7 * 3600
     # Keep this much history per location for charts and exports.
     retain_days: int = 14
+    # Installs that haven't opened the app (which re-sends settings) in this
+    # long are deleted, along with their history.
+    inactive_install_days: int = 90
     run_scheduler: bool = True
 
     # APNs token-based auth. Leave blank to run without push (alerts are still
@@ -91,6 +94,7 @@ def load_settings() -> Settings:
         evaluate_interval_seconds=_env_int("EVALUATE_INTERVAL_SECONDS", 15 * 60),
         stale_after_seconds=_env_int("STALE_AFTER_SECONDS", 7 * 3600),
         retain_days=_env_int("RETAIN_DAYS", 14),
+        inactive_install_days=_env_int("INACTIVE_INSTALL_DAYS", 90),
         run_scheduler=_env_bool("RUN_SCHEDULER", True),
         apns_team_id=_env("APNS_TEAM_ID"),
         apns_key_id=_env("APNS_KEY_ID"),
