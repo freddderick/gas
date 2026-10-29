@@ -1,0 +1,21 @@
+[Unit]
+Description=Pressure Alert backend (API + 3-hourly Open-Meteo poller + APNs)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=pressure
+Group=pressure
+WorkingDirectory=/opt/pressure-alert/backend
+EnvironmentFile=/etc/pressure-alert/env
+ExecStart=/opt/pressure-alert/venv/bin/pressure-backend serve --host 127.0.0.1 --port 8000
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/pressure-alert
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
