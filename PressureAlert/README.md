@@ -95,6 +95,5 @@ Accessibility: falls and rises always show an arrow and a word, not just a colou
 - **The Swift code has not been compiled.** It was written in a Linux container with no Swift toolchain or Xcode. Expect a few compile fixes on the first Xcode build. The Python backend is fully tested (32 passing tests) and was smoke-tested with uvicorn.
 - **No live call to Open-Meteo has been made.** The build environment's network blocks it, so parsing is tested against the documented response shape (`hourly.time` as unixtime and `hourly.pressure_msl`). Run `pressure-backend fetch-once` once against the real endpoint.
 - **No real push has been sent.** APNs request signing and the payload are tested with a generated key. Sending a real push needs your .p8 key and a device.
-- **App icon:** the `AppIcon` set is empty. Add a 1024×1024 image before archiving.
 - **Spec section 12 validation steps are yours to do:** confirm the Open-Meteo price at checkout, run the Visual Crossing check, read the reviews, check names and trademarks, and run the one-week TestFlight alert trial.
 - **v2 (spec 4.2), deliberately not built:** multiple locations, widgets and Watch, a 14-day pattern (`FORECAST_DAYS=14` on the backend and `days(14)` in the app would enable it), a surface pressure line, a correlation view, and an iPad layout.
